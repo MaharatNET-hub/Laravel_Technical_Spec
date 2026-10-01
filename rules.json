@@ -1,0 +1,261 @@
+{
+  "project": {
+    "name": "City Walk Phase 5 – Plot 5.09 (Tower-A & Tower-B)",
+    "clientRef": "DHRE-0009",
+    "engineerRef": "D23-61",
+    "submittalNo": "CW5.9-DAE-NCC-REM-TS-MEP-002",
+    "revision": 0,
+    "title": "Technical Submittal for LV Switchgear Panel GA Drawing (EMDB's, SMDB's & DB's)",
+    "vendor": "Pioneer Dynamics Switchgear (EATON licensed panel builder)",
+    "specDocument": "Volume 3 – PART F Electrical (IFC Dec 2024)"
+  },
+  "linkedSubmittals": [
+    {
+      "ref": "REM-MAT-EL-023 REV-00",
+      "subject": "LV Switchgear – Material Submittal",
+      "reviewedBy": "Dubai Holding – Technical Control",
+      "status": "Approved as Noted",
+      "openComments": 10,
+      "contractorResponded": false
+    }
+  ],
+  "rules": [
+    {
+      "id": "R1",
+      "appliesTo": [
+        "EMDB"
+      ],
+      "attribute": "ip",
+      "label": "Degree of protection",
+      "operator": "gte",
+      "expected": 54,
+      "clause": {
+        "section": "262300",
+        "path": "2.6.B",
+        "specPage": 182,
+        "text": "The degree of protection of the board shall be IP 54."
+      },
+      "note": "Emergency MDB treated as Emergency Sub-Main (ESMDB). The general MDB clause 2.4.A.2 only asks for at least IP 41 — engineer to confirm.",
+      "comment": "ESMDB need to be IP54 not {actual}. Refer Section {section} clause {path}. Panels: {panels}."
+    },
+    {
+      "id": "R2",
+      "appliesTo": [
+        "SMDB"
+      ],
+      "attribute": "ip",
+      "label": "Degree of protection",
+      "operator": "gte",
+      "expected": 54,
+      "clause": {
+        "section": "262300",
+        "path": "2.6.B",
+        "specPage": 182,
+        "text": "The degree of protection of the board shall be IP 54."
+      },
+      "comment": "SMDB degree of protection to be minimum IP54. Refer Section {section} clause {path}. Panels: {panels}."
+    },
+    {
+      "id": "R3",
+      "appliesTo": [
+        "EMDB"
+      ],
+      "attribute": "form",
+      "label": "Form of separation",
+      "operator": "form",
+      "expected": {
+        "form": "4",
+        "type": "6"
+      },
+      "clause": {
+        "section": "262300",
+        "path": "2.4.A.1",
+        "specPage": 175,
+        "text": "Switchboard construction shall be designed to FORM 4, Type - 6 standards."
+      },
+      "comment": "Form of separation to be Form 4 Type 6. Refer Section {section} clause {path}. Panels: {panels}."
+    },
+    {
+      "id": "R4",
+      "appliesTo": [
+        "SMDB"
+      ],
+      "attribute": "form",
+      "label": "Form of separation",
+      "operator": "form",
+      "expected": {
+        "form": "2",
+        "type": "2"
+      },
+      "clause": {
+        "section": "262300",
+        "path": "2.6.B",
+        "specPage": 182,
+        "text": "The panel board shall be Wall mounting type constructed to BS EN 60439, Form 2, Type - 2 requirements."
+      },
+      "comment": "Vendor to clarify if SMDB is Form 2 Type 2 or not — submission states \"{actual}\" only, Type not declared. Refer Section {section} clause {path}. Panels: {panels}."
+    },
+    {
+      "id": "R5",
+      "appliesTo": [
+        "EMDB",
+        "SMDB"
+      ],
+      "attribute": "auxWire",
+      "label": "Auxiliary wiring size",
+      "operator": "minAll",
+      "expected": 2.5,
+      "unit": "sq.mm",
+      "clause": {
+        "section": "262300",
+        "path": "2.4.C.1",
+        "specPage": 177,
+        "text": "All internal and control wiring … not less than 2.5 sq.mm."
+      },
+      "markup": "NOT ACCEPTED – min. 2.5 sq.mm",
+      "comment": "Auxiliary wiring {actual} sq.mm not accepted; minimum 2.5 sq.mm required. Refer Section {section} clause {path}. Panels: {panels}."
+    },
+    {
+      "id": "R6",
+      "appliesTo": [
+        "EMDB",
+        "SMDB"
+      ],
+      "attribute": "heater",
+      "label": "Anti-condensation heater + thermostat",
+      "markup": "NOT FOUND in part list: anti-condensation heater + thermostat",
+      "operator": "present",
+      "clause": {
+        "section": "262300",
+        "path": "2.4.A.4",
+        "specPage": 176,
+        "text": "Each compartment shall be provided with a separately fixed compartment thermostat controlled heater."
+      },
+      "comment": "Contractor to justify not providing ACH (anti-condensation heater) and thermostat/hygrostat as per project requirements. Refer Section {section} clause {path}. Panels: {panels}."
+    },
+    {
+      "id": "R7",
+      "appliesTo": [
+        "EMDB",
+        "SMDB"
+      ],
+      "attribute": "consistency",
+      "label": "Cover sheet = Data sheet = GA notes",
+      "operator": "consistent",
+      "clause": {
+        "section": "—",
+        "path": "Internal consistency",
+        "specPage": null,
+        "text": "Declared equipment type must match across cover sheet, data sheet and GA drawing notes."
+      },
+      "comment": "Data in submission not consistent between cover sheet, data sheet and GA drawing. Panels: {panels}."
+    },
+    {
+      "id": "R8",
+      "appliesTo": [
+        "*"
+      ],
+      "attribute": "documents",
+      "label": "Drawing set complete & correctly titled",
+      "operator": "noAnomaly",
+      "clause": {
+        "section": "—",
+        "path": "Document control",
+        "specPage": null,
+        "text": "Each panel shall have its own cover sheet, data sheet, SLD, GA and material list."
+      },
+      "comment": "Pages {pages} are placed under {section} but titled {titleBlock}; GA drawing for {section} to be verified/submitted."
+    }
+  ],
+  "disclosure": {
+    "hide": true,
+    "aliases": [
+      [
+        "City Walk Phase 5 – Plot 5.09 (Tower-A & Tower-B)",
+        "Project A – Residential Towers A & B"
+      ],
+      [
+        "CW5.9-DAE-NCC-REM-TS-MEP-002",
+        "PRJ-TS-MEP-002"
+      ],
+      [
+        "REM-MAT-EL-023",
+        "PRJ-MAT-EL-023"
+      ],
+      [
+        "Pioneer Dynamics Switchgear (EATON licensed panel builder)",
+        "Panel vendor (licensed panel builder)"
+      ],
+      [
+        "Pioneer Dynamics Switchgear",
+        "Panel vendor"
+      ],
+      [
+        "Dubai Holding – Technical Control",
+        "Client – Technical Control"
+      ],
+      [
+        "Dubai Holding",
+        "Client"
+      ],
+      [
+        "Dewan Architects + Engineers",
+        "Consultant"
+      ],
+      [
+        "Naresco · REMCO (MEP)",
+        "Main contractor · MEP contractor"
+      ],
+      [
+        "DHRE-0009",
+        "CL-0000"
+      ],
+      [
+        "D23-61",
+        "EN-00"
+      ],
+      [
+        "City Walk",
+        "Project A"
+      ],
+      [
+        "Dewan",
+        "Consultant"
+      ],
+      [
+        "Naresco",
+        "Main contractor"
+      ],
+      [
+        "REMCO",
+        "MEP contractor"
+      ],
+      [
+        "Pioneer",
+        "Panel vendor"
+      ]
+    ],
+    "redactPatterns": [
+      "CITY *WALK",
+      "DUBAI *HOLDING",
+      "DHRE",
+      "MERAAS",
+      "DEWAN",
+      "NARESCO",
+      "REMCO",
+      "PIONEER",
+      "pdswitchgear",
+      "3431248",
+      "343-1248",
+      "PLOT *NO",
+      "AL *WASL",
+      "CW5[.]9",
+      "D23-61",
+      "18324",
+      "340 *0775",
+      "J1 *(Complex|Warehouse)",
+      "599-1039",
+      "Jebel *Ali"
+    ]
+  }
+}

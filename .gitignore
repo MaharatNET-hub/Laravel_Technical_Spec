@@ -1,0 +1,7 @@
+node_modules/
+out/
+uploads/
+.env
+*.tar.gz
+# Client documents are confidential — never commit PDFs (copy submittal.pdf to the server separately)
+*.pdf

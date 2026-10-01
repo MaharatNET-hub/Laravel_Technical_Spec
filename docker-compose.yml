@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    # localhost only — the server's nginx publishes it (3000 = 4jobs, 3001 = hlabook)
+    ports:
+      - "127.0.0.1:3002:4817"
+    mem_limit: 700m
