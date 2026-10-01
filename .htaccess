@@ -10,7 +10,7 @@ Options -Indexes
     RewriteEngine On
 
     RewriteRule ^(artisan|composer\.(json|lock)|phpunit\.xml|README\.md)$ - [F,L]
-    RewriteRule ^(app|bootstrap|config|database|docs|release|resources|routes|storage|tests|vendor)(/|$) - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|docs|lang|release|resources|routes|storage|tests|vendor)(/|$) - [F,L]
 
     RewriteCond %{REQUEST_URI} !/public/
     RewriteRule ^(.*)$ public/$1 [L]

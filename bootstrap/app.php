@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: ['api/*']);
         // free/shared hosts terminate HTTPS at a proxy: trust it so links keep https://
         $middleware->trustProxies(at: '*');
+        // v2 admin: guests go to its login page
+        $middleware->redirectGuestsTo(fn () => route('v2.admin.login'));
+        $middleware->redirectUsersTo(fn () => route('v2.admin.dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

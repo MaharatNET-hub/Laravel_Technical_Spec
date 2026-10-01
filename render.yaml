@@ -11,3 +11,12 @@ services:
       # private direct-download link to the sample submittal; the seeder fetches it on every start
       - key: DEMO_SAMPLE_URL
         sync: false
+      # v2 admin login (/v2/admin)
+      - key: V2_ADMIN_EMAIL
+        sync: false
+      - key: V2_ADMIN_PASSWORD
+        sync: false
+      # optional: an external database so v2 data survive restarts, e.g. postgres://user:pass@host:5432/db
+      # (also set DB_CONNECTION to pgsql or mysql)
+      - key: DB_URL
+        sync: false

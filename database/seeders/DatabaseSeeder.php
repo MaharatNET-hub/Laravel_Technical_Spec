@@ -7,10 +7,11 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * The demo keeps no database tables; seeding restores its files instead.
+     * v1 keeps no tables (DemoSeeder restores its files); v2 seeds its admin and site content.
      */
     public function run(): void
     {
         $this->call(DemoSeeder::class);
+        $this->call(V2Seeder::class);
     }
 }

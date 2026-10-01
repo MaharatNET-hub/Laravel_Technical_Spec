@@ -8,3 +8,5 @@ storage/app/demo
 storage/logs/*.log
 *.pdf
 bootstrap/cache/*.php
+database/database.sqlite
+storage/app/v2

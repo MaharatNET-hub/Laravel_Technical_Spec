@@ -23,7 +23,7 @@ class ReviewPipelineTest extends TestCase
     }
 
     /** A tiny two-panel submittal: cover, data sheet and part list per panel, with client names in the title block. */
-    private static function submittal(): string
+    public static function submittal(): string
     {
         $pages = [];
         foreach ([['EMDB-A-1', 'IP-43', '1.5'], ['SMDB-A-1', 'IP-54', '2.5']] as [$panel, $ip, $wire]) {

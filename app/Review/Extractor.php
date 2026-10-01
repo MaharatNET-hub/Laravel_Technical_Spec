@@ -42,6 +42,17 @@ final class Extractor
         if (! $job) {
             throw new \RuntimeException('No submittal is being processed');
         }
+        // one batch at a time per review (two browsers may drive the same submission)
+        $lock = fopen(Store::path('job.lock'), 'c');
+        if (! $lock || ! flock($lock, LOCK_EX | LOCK_NB)) {
+            return ['page' => $job['next'] - 1, 'total' => $job['total'], 'panel' => null, 'done' => $job['next'] > $job['total'] && Store::read('extracted.json') !== null, 'busy' => true];
+        }
+        $job = Store::read('job.json'); // re-read under the lock
+        if ($job['next'] > $job['total']) {
+            flock($lock, LOCK_UN);
+
+            return ['page' => $job['total'], 'total' => $job['total'], 'panel' => null, 'done' => true];
+        }
         $cfg = Store::rules();
         $re = '/' . implode('|', $cfg['disclosure']['redactPatterns']) . '/i';
         $r = Reader::open($job['source']);
@@ -74,11 +85,12 @@ final class Extractor
             }
         }
         Store::write('pages.json', $records);
-        Store::write('job.json', $job);
         $done = $job['next'] > $job['total'];
         if ($done) {
             self::finish($job, $records);
         }
+        Store::write('job.json', $job);
+        flock($lock, LOCK_UN);
 
         return ['page' => $job['next'] - 1, 'total' => $job['total'], 'panel' => $last, 'done' => $done];
     }

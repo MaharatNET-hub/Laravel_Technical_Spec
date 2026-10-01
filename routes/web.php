@@ -17,3 +17,5 @@ Route::prefix('api')->group(function () {
 });
 
 Route::get('out/{name}', [DemoController::class, 'output'])->where('name', '[A-Za-z0-9._-]+');
+
+require __DIR__ . '/v2.php';

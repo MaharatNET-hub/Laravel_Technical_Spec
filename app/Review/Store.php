@@ -2,12 +2,40 @@
 
 namespace App\Review;
 
-/** File-based storage for the demo (no database needed): storage/app/demo/... */
+/**
+ * File-based storage for a review (no database needed). v1 uses storage/app/demo; v2 points it at
+ * one folder per submission with Store::using().
+ */
 final class Store
 {
+    /** Absolute base folder, or null for the v1 demo folder. */
+    private static ?string $base = null;
+
+    /** Run $fn with the store pointed at $dir (restored afterwards). */
+    public static function using(string $dir, callable $fn): mixed
+    {
+        $prev = self::$base;
+        self::$base = rtrim($dir, '/');
+        try {
+            return $fn();
+        } finally {
+            self::$base = $prev;
+        }
+    }
+
+    public static function scoped(): bool
+    {
+        return self::$base !== null;
+    }
+
+    public static function setBase(?string $dir): void
+    {
+        self::$base = $dir === null ? null : rtrim($dir, '/');
+    }
+
     public static function dir(string $sub = ''): string
     {
-        $d = storage_path('app/demo' . ($sub !== '' ? '/' . $sub : ''));
+        $d = (self::$base ?? storage_path('app/demo')) . ($sub !== '' ? '/' . $sub : '');
         if (! is_dir($d)) {
             mkdir($d, 0775, true);
         }
@@ -64,7 +92,11 @@ final class Store
     /** The sample submittal (copied to the server by FTP, never committed). */
     public static function samplePath(): ?string
     {
-        foreach ([self::path('sample/submittal.pdf'), self::path('submittal.pdf'), base_path('submittal.pdf')] as $f) {
+        $candidates = [self::path('sample/submittal.pdf'), self::path('submittal.pdf')];
+        if (! self::scoped()) {
+            $candidates[] = base_path('submittal.pdf');
+        }
+        foreach ($candidates as $f) {
             if (is_file($f)) {
                 return $f;
             }

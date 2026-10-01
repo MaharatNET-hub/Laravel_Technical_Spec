@@ -1,0 +1,38 @@
+@props(['name', 'class' => 'i'])
+@php
+$p = [
+  'bolt' => '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  'fan' => '<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 4-7s3 4-1 6M14 12c4 0 7 1 7 4s-4 3-6-1M12 14c0 4-1 7-4 7s-3-4 1-6M10 12c-4 0-7-1-7-4s4-3 6 1"/>',
+  'drop' => '<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/>',
+  'clipboard' => '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4M9 17h6"/>',
+  'helmet' => '<path d="M3 17h18M5 17a7 7 0 0 1 14 0M12 6v4M9 7.5 10 11M15 7.5 14 11"/>',
+  'chart' => '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  'arrow' => '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  'check' => '<path d="m5 12 5 5L20 7"/>',
+  'mail' => '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  'phone' => '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
+  'pin' => '<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+  'clock' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  'upload' => '<path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>',
+  'file' => '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/>',
+  'menu' => '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  'globe' => '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  'shield' => '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  'building' => '<path d="M4 21V5l8-2v18M12 7l8 3v11M2 21h20M7 9h2M7 13h2M7 17h2M15 13h2M15 17h2"/>',
+  'x' => '<path d="M6 6l12 12M18 6 6 18"/>',
+  'dash' => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  'inbox' => '<path d="M3 13h5l2 3h4l2-3h5M5 5h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/>',
+  'cog' => '<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/>',
+  'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  'out' => '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>',
+  'eye' => '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  'down' => '<path d="M12 4v12m0 0 4-4m-4 4-4-4M4 20h16"/>',
+  'trash' => '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  'plus' => '<path d="M12 5v14M5 12h14"/>',
+  'edit' => '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  'send' => '<path d="M21 3 3 10l7 3 3 7z"/><path d="m10 13 4-4"/>',
+  'star' => '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+];
+@endphp
+<svg {{ $attributes->merge(['class' => $class]) }} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $p[$name] ?? $p['bolt'] !!}</svg>

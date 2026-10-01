@@ -58,6 +58,14 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        // emails when no mail server is configured (MAIL_MAILER=log) — readable in storage/logs/mail.log
+        'mail' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/mail.log'),
+            'level' => 'debug',
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
