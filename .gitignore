@@ -1,7 +1,27 @@
-node_modules/
-out/
-uploads/
+/.phpunit.cache
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
 .env
-*.tar.gz
-# Client documents are confidential — never commit PDFs (copy submittal.pdf to the server separately)
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/auth.json
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+
+# Client documents are confidential — never commit PDFs (copy the sample submittal to the server separately)
 *.pdf
+/storage/app/demo/

@@ -1,0 +1,17 @@
+# For hosts where the upload folder (htdocs / public_html) is the web root and cannot point at public/:
+# every request is served from public/, and the app's private files are never reachable.
+Options -Indexes
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteRule ^(artisan|composer\.(json|lock)|phpunit\.xml|README\.md)$ - [F,L]
+    RewriteRule ^(app|bootstrap|config|database|docs|release|resources|routes|storage|tests|vendor)(/|$) - [F,L]
+
+    RewriteCond %{REQUEST_URI} !/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

@@ -1,5 +1,16 @@
-import * as pdfjs from '/pdfjs/pdf.min.mjs';
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
+import * as pdfjs from './lib/pdfjs/pdf.min.js';
+pdfjs.GlobalWorkerOptions.workerSrc = new URL('./lib/pdfjs/pdf.worker.min.js', import.meta.url).href;
+const STD_FONTS = new URL('./lib/pdfjs/standard_fonts/', import.meta.url).href;
+
+// All URLs are relative to where the app is installed (works in a sub-folder too).
+const url = p => `${window.APP.base}/${p}`;
+const api = async (p, body, opts = {}) => {
+  const res = await fetch(url('api/' + p), { method: body === undefined ? 'GET' : 'POST', headers: body instanceof Blob ? {} : { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : body instanceof Blob ? body : JSON.stringify(body), ...opts });
+  const data = await res.json().catch(() => ({ error: res.status === 413 ? 'File part too large for this server' : `Server error ${res.status}` }));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+};
+const outUrl = r => url(`out/${encodeURIComponent(r.pdfName)}?t=${S.stamp}`);
 
 const $ = (s, el = document) => el.querySelector(s);
 const mask = s => S.hide ? S.aliases.reduce((t, [real, alias]) => t.split(real).join(alias), String(s ?? '')) : String(s ?? '');
@@ -23,7 +34,7 @@ const COLNAMES = ['IP rating', 'Form / Type', 'Aux. wiring', 'Heater + thermosta
 const S = { hide: true, aliases: [], data: null, view: 'home', tab: 'comments', comments: [], decision: '', engineer: '', filter: { kind: 'All', issues: false, q: '' }, page: null, zoom: 1.35, pdf: null, pdfUrl: null, stamp: Date.now() };
 
 async function load() {
-  S.data = await (await fetch('/api/state')).json();
+  S.data = await api('state');
   S.hide = S.data.hide; S.aliases = S.data.aliases;
   const r = S.data.review;
   if (r) {
@@ -39,6 +50,7 @@ function toast(html, ms = 3500) {
 }
 
 function disclosureSwitch() {
+  if (S.data.locked) { $('.user').innerHTML = `<span class="disc" title="This installation always hides client details"><span><b>Client disclosure</b><small>Details hidden (locked)</small></span></span>`; return; }
   $('.user').innerHTML = `<label class="disc" title="Hide the project, client and company names on screen and black them out on the drawings">
     <span class="switch"><input type="checkbox" id="hide" ${S.hide ? 'checked' : ''}><span></span></span>
     <span><b>Client disclosure</b><small>${S.hide ? 'Details hidden' : 'Details visible'}</small></span></label>`;
@@ -164,28 +176,34 @@ function setProc(step, pct, detail) {
   if (S.view === 'proc') { $('#view').innerHTML = procView(); }
 }
 
+// The work runs in short requests (shared hosts stop long ones): upload in chunks, then read pages in batches.
 async function runReview(file) {
   S.view = 'proc'; Object.assign(P, { step: 0, pct: 2, detail: file ? file.name : 'Sample submittal' }); render();
-  const res = await fetch(file ? `/api/run?name=${encodeURIComponent(file.name)}` : '/api/run?sample=1', { method: 'POST', body: file || null });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); toast('Could not process: ' + esc(e.error || res.statusText)); S.view = 'home'; return render(); }
-  const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '', lastPanel = '';
-  setProc(1, 5, 'Opening document…');
-  for (;;) {
-    const { value, done } = await reader.read(); if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split('\n'); buf = lines.pop();
-    for (const l of lines) {
-      if (!l.trim()) continue;
-      const m = JSON.parse(l);
-      if (m.stage === 'error') { toast('Error: ' + esc(m.error), 6000); S.view = 'home'; return render(); }
-      if (m.stage === 'read' && m.total) {
-        if (m.panel) lastPanel = m.panel;
-        setProc(m.page / m.total > .15 ? 2 : 1, 5 + 60 * m.page / m.total, `Page ${m.page} of ${m.total}${lastPanel ? ' · ' + lastPanel : ''}`);
+  const t0 = Date.now();
+  try {
+    let job;
+    if (file) {
+      const size = window.APP.chunk, total = Math.max(1, Math.ceil(file.size / size));
+      for (let i = 0; i < total; i++) {
+        setProc(0, 2 + 3 * i / total, `Uploading ${file.name} · ${Math.round(100 * i / total)}%`);
+        job = await api(`upload?index=${i}&total=${total}&name=${encodeURIComponent(file.name)}`, file.slice(i * size, (i + 1) * size));
       }
-      if (m.stage === 'check') { setProc(3, 72, `${m.panels} panels found · applying rules`); setTimeout(() => P.step === 3 && setProc(4, 85, 'Writing comment sheet and marking pages…'), 900); }
-      if (m.stage === 'done') { setProc(5, 100, `Done in ${m.seconds.toFixed(1)} s`); S.doneIn = m.seconds; }
+    } else job = await api('start-sample', {});
+    setProc(1, 5, `Opening document · ${job.total} pages`);
+    let lastPanel = '';
+    for (;;) {
+      const m = await api('step', {});
+      if (m.panel) lastPanel = m.panel;
+      setProc(m.page / m.total > .15 ? 2 : 1, 5 + 60 * m.page / m.total, `Page ${m.page} of ${m.total}${lastPanel ? ' · ' + lastPanel : ''}`);
+      if (m.done) break;
     }
-  }
+    setProc(3, 72, 'Applying rules');
+    const slow = setTimeout(() => P.step === 3 && setProc(4, 85, 'Writing comment sheet and marking pages…'), 900);
+    S.data = await api('review', {});
+    clearTimeout(slow);
+    S.doneIn = (Date.now() - t0) / 1000;
+    setProc(5, 100, `Done in ${S.doneIn.toFixed(1)} s`);
+  } catch (e) { toast('Could not process: ' + esc(e.message), 7000); S.view = 'home'; return render(); }
   await load();
   S.stamp = Date.now(); S.pdf = null; S.tab = 'comments'; S.page = null;
   setTimeout(() => { S.view = 'ws'; render(); toast(`Review drafted in ${S.doneIn?.toFixed(0) ?? '–'} s · ${S.data.review.comments.length} comments`); }, 700);
@@ -208,7 +226,7 @@ function wsView() {
       <select id="decision" class="${revise ? 'revise' : ''}">${DECISIONS.map(d => `<option ${d === S.decision ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
       <div><div class="label" style="margin-bottom:4px">Engineer</div><input id="engineer" placeholder="Name for sign-off" value="${esc(S.engineer)}" style="border:1px solid var(--line2);border-radius:9px;padding:8px 10px;background:var(--panel);width:170px"></div>
       <div style="align-self:flex-end;display:flex;gap:8px">
-        <a class="btn" href="/out/${encodeURIComponent(r.pdfName)}?t=${S.stamp}" download="${esc(r.pdfName)}">${I.down}${r.final ? 'Download' : 'Draft PDF'}</a>
+        <a class="btn" href="${outUrl(r)}" download="${esc(r.pdfName)}">${I.down}${r.final ? 'Download' : 'Draft PDF'}</a>
         <button class="btn primary" data-generate>${I.check}Approve &amp; generate</button>
       </div>
     </div>
@@ -320,9 +338,14 @@ async function drawPage() {
   const r = S.data.review;
   const outPage = typeof S.page === 'string' ? +S.page.slice(1) || 1 : S.page + r.sheetPages;
   const want = S.page;
-  const doc = await pdfjs.getDocument({ url: `/api/page?n=${outPage}&t=${S.stamp}` }).promise;
+  // the whole issued PDF, fetched in ranges: only the pages viewed are downloaded
+  if (S.pdfStamp !== S.stamp || !S.pdf) {
+    S.pdf = pdfjs.getDocument({ url: outUrl(r), disableAutoFetch: true, disableStream: true, rangeChunkSize: 262144, standardFontDataUrl: STD_FONTS }).promise;
+    S.pdfStamp = S.stamp;
+  }
+  const doc = await S.pdf;
   if (want !== S.page) return; // user moved on while loading
-  const page = await doc.getPage(1);
+  const page = await doc.getPage(Math.min(outPage, doc.numPages));
   const vp = page.getViewport({ scale: S.zoom * (window.devicePixelRatio || 1) });
   const cv = document.createElement('canvas');
   cv.width = vp.width; cv.height = vp.height; cv.style.width = vp.width / (window.devicePixelRatio || 1) + 'px';
@@ -392,18 +415,18 @@ document.addEventListener('click', async e => {
   else if (d.applyRules !== undefined) {
     const edits = S.data.review.rules.map(x => ({ id: x.id, active: $(`[data-act="${x.id}"]`).checked, expected: $(`[data-exp="${x.id}"]`)?.value }));
     t.disabled = true; t.textContent = 'Re-checking…';
-    const res = await fetch('/api/rules', { method: 'POST', body: JSON.stringify(edits) });
-    S.data = await res.json(); await load(); S.stamp = Date.now(); S.pdf = null; S.page = null;
+    try { S.data = await api('rules', edits); } catch (err) { toast('Error: ' + esc(err.message), 6000); }
+    await load(); S.stamp = Date.now(); S.pdf = null; S.page = null;
     render(); toast(`Re-checked · ${S.data.review.stats.fail} non-compliances · ${S.comments.length} comments`);
   }
   else if (d.generate !== undefined) {
     const comments = S.comments.filter(c => c.text.trim()).map(({ orig, ...c }) => c);
     t.disabled = true; t.innerHTML = 'Generating…';
-    await fetch('/api/generate', { method: 'POST', body: JSON.stringify({ comments, decision: S.decision, engineer: S.engineer }) });
+    try { await api('generate', { comments, decision: S.decision, engineer: S.engineer }); } catch (err) { toast('Error: ' + esc(err.message), 6000); }
     await load(); S.stamp = Date.now(); S.pdf = null;
     render();
     const r = S.data.review;
-    toast(`PDF issued · ${r.comments.length} comments · ${esc(r.decision)} — <a href="/out/${encodeURIComponent(r.pdfName)}?t=${S.stamp}" download="${esc(r.pdfName)}">Download</a>`, 8000);
+    toast(`PDF issued · ${r.comments.length} comments · ${esc(r.decision)} — <a href="${outUrl(r)}" download="${esc(r.pdfName)}">Download</a>`, 8000);
   }
 });
 document.addEventListener('input', e => {
@@ -420,9 +443,9 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.id === 'hide') {
     S.hide = t.checked; render();
-    if (!S.data.review) { fetch('/api/settings', { method: 'POST', body: JSON.stringify({ hide: S.hide }) }); return; }
+    if (!S.data.review) { api('settings', { hide: S.hide }).then(load).then(() => S.view === 'home' && ($('#view').innerHTML = homeView())); return; }
     toast(S.hide ? 'Hiding client details on the drawings…' : 'Showing client details on the drawings…', 30000);
-    fetch('/api/settings', { method: 'POST', body: JSON.stringify({ hide: S.hide }) }).then(async () => {
+    api('settings', { hide: S.hide }).catch(err => toast('Error: ' + esc(err.message), 6000)).then(async () => {
       await load(); S.stamp = Date.now(); // names come back from the server already masked (or not)
       if (S.view === 'ws') { $('#view').innerHTML = wsView(); if (S.tab === 'drawings') drawPage(); }
       crumbs();

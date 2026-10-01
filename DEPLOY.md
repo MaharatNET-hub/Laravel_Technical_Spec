@@ -1,74 +1,57 @@
-# نشر ديمو مراجعة التقديمات على السيرفر
+# رفع الديمو على استضافة مجانية (Laravel بدون Docker وبدون كلمة سر)
 
-السيرفر `159.223.136.60` — نفس نمط الأنظمة الثانية: حاوية Docker على **localhost فقط** و**nginx الموجود** ينشرها على دومين فرعي مع HTTPS.
+النسخة جاهزة للرفع في ملف واحد: **`release/submittal-review-laravel.zip`**
+فيه كل شي (مع مجلد `vendor`)، فما بتحتاجي Composer ولا Terminal ولا قاعدة بيانات.
 
-| المكوّن | التفاصيل |
+## المتطلبات
+- استضافة PHP عليها **PHP 8.2 أو أحدث** (من لوحة التحكم اختاري النسخة إذا في خيار).
+- خادم Apache أو LiteSpeed (هاد الموجود بأغلب الاستضافات المجانية).
+- ما في داعي لقاعدة بيانات.
+
+## الخطوات
+1. نزّلي `release/submittal-review-laravel.zip` من GitHub (Download raw file).
+2. ادخلي على **File Manager** بالاستضافة، وافتحي مجلد الموقع (غالباً `htdocs` أو `public_html`).
+   احذفي الملفات الافتراضية اللي فيه (مثل `index.html`).
+3. ارفعي ملف الـzip وفكّيه (Extract) **جوّا نفس المجلد**. لازم يطلع فيه مباشرة:
+   `app`، `public`، `vendor`، `.htaccess`، `.env.example`…
+   - إذا الاستضافة ما بتفك ملفات zip: فكّيه على جهازك وارفعي المجلدات بالـFTP (مثلاً FileZilla).
+   - تأكدي إنه ملف `.htaccess` انرفع، لأن بعض البرامج بتخبّي الملفات اللي بتبلش بنقطة.
+4. افتحي رابط الموقع. أول فتحة بتعمل لحالها ملف `.env` ومفتاح خاص فيه.
+5. **ملف التقديم (الديمو):** ارفعي ملف التقديم بالـFTP على المسار:
+   `storage/app/demo/sample/submittal.pdf`
+   هيك بيظهر زر **Run review** بالصفحة الرئيسية. وبتقدري كمان ترفعي أي ملف PDF من الصفحة مباشرة.
+
+## إعدادات اختيارية (بملف `.env` بعد أول فتحة)
+| الإعداد | المعنى |
 |---|---|
-| التطبيق | حاوية على `127.0.0.1:3002` (3000 = 4jobs، 3001 = hlabook) |
-| الحماية | اسم مستخدم + كلمة سر (وثائق العميل سرّية) |
-| الذاكرة | حد أقصى 700MB — لا يوجد build ثقيل (Node فقط) |
+| `DEMO_LOCK_DISCLOSURE=true` | بيانات العميل مخفية دايماً ومفتاح Client disclosure بيختفي. **مستحسن** لأنه الموقع بدون كلمة سر، وأي حدا معه الرابط بيقدر يفتحه. |
+| `DEMO_STEP_SECONDS=12` | قديش ثانية بيشتغل كل طلب وهو عم يقرا الصفحات. إذا الاستضافة بتقطع الطلبات بسرعة، نزّليه لـ `8`. |
 
----
+## كيف بيشتغل على استضافة مجانية
+- الاستضافات المجانية بتقطع أي طلب بياخد أكتر من 30 لـ 60 ثانية، وبتحدد حجم الرفع. لهيك:
+  - الملف بينرفع **على قطع** (1 ميغا لكل قطعة).
+  - الصفحات بتنقرا **على دفعات** (حوالي 12 ثانية لكل دفعة)، مع شريط تقدّم.
+- جرّبتها على Apache بحدود استضافة مجانية (30 ثانية لكل طلب، 128 ميغا ذاكرة، 8 ميغا رفع): ملف تجريبي 292 صفحة وحجمه 30 ميغا خلص بدون أي خطأ.
+- الملفات الخاصة (`.env`، `storage`، `vendor`، الكود) محمية بملف `.htaccess`، ورابطها بيعطي 403.
 
-## 1) DNS
-عند مزوّد الدومين أضف سجل:
+## إذا صار خطأ
+| المشكلة | الحل |
+|---|---|
+| صفحة بيضا أو خطأ 500 | تأكدي من نسخة PHP (8.2 أو أحدث). وشوفي `storage/logs/laravel.log`. |
+| الصفحة بتفتح بس بدون تنسيق | ملف `.htaccess` اللي بجذر الموقع ما انرفع. |
+| "Not a PDF file" أو "Encrypted" | الملف مش PDF، أو محمي بكلمة سر. احفظي نسخة بدون حماية. |
+| الصفحات بتوقف بالنص | نزّلي `DEMO_STEP_SECONDS` لـ 8. |
+| ما بيقدر يكتب ملفات | أعطي مجلد `storage` ومجلد `bootstrap/cache` صلاحية كتابة (755 أو 775). |
 
-| Type | Name | Value |
-|---|---|---|
-| A | `review` (مثلاً) | `159.223.136.60` |
-
-## 2) جلب الكود
-
-من GitHub (مستودع خاص):
+## على سيرفر عندك فيه Terminal (VPS)
 ```bash
-cd /root && git clone https://github.com/MaharatNET-hub/submittal-review-demo.git submittal-review
-```
-ملف العميل `submittal.pdf` **مش موجود على GitHub** (سرّي) — انسخه مرة وحدة من جهازك:
-```
-scp "$env:USERPROFILE\Desktop\submittal-review-demo\submittal.pdf" root@159.223.136.60:/root/submittal-review/
-```
-
-أو بدل GitHub: رفع ملف مضغوط من جهازك
-من PowerShell على جهازك:
-```
-scp "$env:USERPROFILE\Desktop\submittal-review-demo.tar.gz" root@159.223.136.60:/root/
+git clone <repo> submittal-review && cd submittal-review
+composer install --no-dev -o
+# خلّي جذر الموقع (DocumentRoot) يأشّر على مجلد public/ أو اتركي .htaccess يلي بالجذر يشتغل
+chmod -R 775 storage bootstrap/cache
 ```
 
-## 3) على السيرفر
+## تحديث نسخة الرفع (للمطوّر)
 ```bash
-ssh root@159.223.136.60
-mkdir -p /root/submittal-review && cd /root/submittal-review
-tar xzf /root/submittal-review-demo.tar.gz
-cp .env.example .env
-nano .env        # غيّر DEMO_PASSWORD لكلمة سر قوية
-docker compose up -d --build
-curl -I -u demo:كلمة_السر http://127.0.0.1:3002   # لازم 200
-```
-
-## 4) nginx + HTTPS
-```bash
-sed 's/DOMAIN/review.example.com/' deploy/submittal-review.conf > /etc/nginx/sites-available/submittal-review
-ln -s /etc/nginx/sites-available/submittal-review /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
-certbot --nginx -d review.example.com
-```
-(استبدل `review.example.com` بالدومين الفعلي في الأمرين.)
-
-افتح `https://review.example.com` ← بيطلب اسم المستخدم وكلمة السر.
-
----
-
-## تحديث لاحق
-```bash
-cd /root/submittal-review && git pull && docker compose up -d --build
-```
-أو ارفع tar جديد وفكّه بنفس المجلد، ثم:
-```bash
-cd /root/submittal-review && docker compose up -d --build
-```
-
-## إيقاف / حذف بعد انتهاء الديمو
-```bash
-cd /root/submittal-review && docker compose down
-rm /etc/nginx/sites-enabled/submittal-review && systemctl reload nginx
+bash release/build.sh      # بيطلع release/submittal-review-laravel.zip
 ```
