@@ -4,6 +4,7 @@
 //   out/<submittal>-Rev0-REVIEWED.pdf   comment sheet + the submittal stamped and marked up
 import fs from 'fs';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
+import { redactPage, scrubInfo } from './redact.mjs';
 
 const cfg = JSON.parse(fs.readFileSync('rules.json', 'utf8'));
 const activeRules = cfg.rules.filter(r => r.active !== false);
@@ -91,7 +92,7 @@ function describePanels(names, kind) {
   if (names.length > 6 && missing.length <= 4) return `all ${kind.join('/')}s except ${missing.join(', ')} (${names.length} panels)`;
   return names.join(', ');
 }
-const ascii = s => s.replace(/≥/g, '>=').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/—/g, '-');
+const ascii = s => String(s ?? '').replace(/≥/g, '>=').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/—/g, '-');
 
 const comments = [];
 for (const l of cfg.linkedSubmittals.filter(s => !s.contractorResponded)) {
@@ -158,12 +159,90 @@ function wrap(text, f, size, width) {
   return lines;
 }
 
+const P = cfg.project, parties = P.parties || {};
+const today = new Date().toISOString().slice(0, 10);
+const T = s => ascii(mask(s));
+const withheld = 'CLIENT DETAILS WITHHELD - CLIENT DISCLOSURE ON';
+const issued = []; // generated pages in the order they appear: {key, title, page}
+const mark = (key, title) => issued.push({ key, title, page: out.getPageCount() });
+const box = (page, x, y, on, size = 9) => {
+  page.drawRectangle({ x, y: y - 1, width: size, height: size, borderColor: INK, borderWidth: 0.8 });
+  if (on) page.drawText('X', { x: x + 1.6, y: y + 0.4, size: size - 1, font: bold, color: RED });
+};
+const footer = (page, W) => {
+  page.drawText('Generated automatically from the submittal; the engineer reviews, edits and signs.', { x: 40, y: 24, size: 7.5, font, color: GREY });
+  if (hide) page.drawText(withheld, { x: W - 40 - bold.widthOfTextAtSize(withheld, 7.5), y: 24, size: 7.5, font: bold, color: GREY });
+};
+// Party logos are not reproduced: names only (and masked when client disclosure is on).
+const partyRow = (page, W, y) => {
+  const list = [['Client', parties.client], ['Developer', parties.developer], ['Consultant', parties.consultant], ['Main contractor', parties.mainContractor]].filter(x => x[1]);
+  const w = (W - 80) / Math.max(list.length, 1);
+  list.forEach(([k, v], i) => {
+    page.drawRectangle({ x: 40 + i * w, y: y - 30, width: w - 6, height: 30, borderColor: GREY, borderWidth: 0.6 });
+    page.drawText(k.toUpperCase(), { x: 46 + i * w, y: y - 11, size: 6.5, font: bold, color: GREY });
+    page.drawText(T(v).slice(0, 34), { x: 46 + i * w, y: y - 24, size: 8.5, font: bold, color: INK });
+  });
+};
+const field = (page, x, y, k, v, w = 200) => {
+  page.drawText(k, { x, y, size: 7, font: bold, color: GREY });
+  wrap(T(v || '-'), font, 9, w).slice(0, 3).forEach((l, i) => page.drawText(l, { x, y: y - 12 - i * 11, size: 9, font, color: INK }));
+};
+const section = (page, W, y, title) => {
+  page.drawRectangle({ x: 40, y: y - 16, width: W - 80, height: 16, color: rgb(0.93, 0.93, 0.95), borderColor: INK, borderWidth: 0.6 });
+  page.drawText(title, { x: 46, y: y - 12, size: 9, font: bold, color: INK });
+};
+
+// Submittal transmittal (Form F12.5A): page 1 = parts A/B (from the submittal), page 2 = parts C/D (engineer)
+{
+  const W = 595, H = 842;
+  let page = out.addPage([W, H]); mark('transmittal', 'Transmittal · Parts A/B');
+  page.drawText('SUBMITTAL TRANSMITTAL', { x: 40, y: H - 52, size: 16, font: bold, color: INK });
+  page.drawText('Form F12.5A', { x: W - 40 - font.widthOfTextAtSize('Form F12.5A', 9), y: H - 50, size: 9, font, color: GREY });
+  partyRow(page, W, H - 66);
+  let y = H - 120;
+  section(page, W, y, 'PART A - SUBMITTAL DETAILS (CONTRACTOR)'); y -= 34;
+  field(page, 46, y, 'PROJECT', `${P.engineerRef} ${P.name}`, 250); field(page, 320, y, 'CLIENT REF.', P.clientRef); y -= 44;
+  field(page, 46, y, 'SUBMITTAL NO.', P.submittalNo, 250); field(page, 320, y, 'REVISION', String(P.revision)); field(page, 420, y, 'DATE SUBMITTED', P.submittedAt); y -= 44;
+  field(page, 46, y, 'DISCIPLINE', P.discipline || 'Electrical'); field(page, 320, y, 'SPECIFICATION', P.specDocument, 220); y -= 44;
+  field(page, 46, y, 'TITLE', P.title, 500); y -= 50;
+  field(page, 46, y, 'SUBMITTED BY', [parties.mainContractor, parties.mepContractor].filter(Boolean).join(' / '), 250); field(page, 320, y, 'VENDOR / MANUFACTURER', P.vendor, 220); y -= 50;
+  section(page, W, y, 'PART B - ATTACHMENTS & PURPOSE'); y -= 34;
+  field(page, 46, y, 'ATTACHMENTS', `Technical submittal, ${ex.pageCount} pages (${panels.length} panels: cover sheets, data sheets, SLD, GA, material lists)`, 500); y -= 44;
+  for (const pur of ['Submitted for review and approval', 'Submitted for information', 'Resubmitted (revision)']) {
+    box(page, 46, y, pur === (P.purpose || 'Submitted for review and approval')); page.drawText(pur, { x: 62, y, size: 9, font, color: INK }); y -= 16;
+  }
+  footer(page, W);
+
+  page = out.addPage([W, H]); mark('transmittal2', 'Transmittal · Parts C/D');
+  page.drawText('SUBMITTAL TRANSMITTAL - ENGINEER\'S RESPONSE', { x: 40, y: H - 52, size: 14, font: bold, color: INK });
+  page.drawText(T(`${P.submittalNo}  Rev. ${P.revision}`), { x: 40, y: H - 68, size: 9, font, color: GREY });
+  y = H - 90;
+  section(page, W, y, "PART C - ENGINEER'S COMMENTS"); y -= 32;
+  const fails = sheet.filter(c => c.status !== 'unclear').length, clar = sheet.length - fails;
+  for (const l of wrap(`See attached Comment Sheet: ${sheet.length} comment(s) (${fails} non-compliance, ${clar} clarification). Marked-up drawings attached; refer to the comment number shown on each mark.`, font, 9.5, W - 100)) { page.drawText(l, { x: 46, y, size: 9.5, font, color: INK }); y -= 13; }
+  y -= 6;
+  for (const c of sheet.slice(0, 12)) {
+    const ls = wrap(`${c.no}. ${T(c.text)}`, font, 8.5, W - 110).slice(0, 2);
+    ls.forEach((l, i) => page.drawText(l, { x: 52, y: y - i * 11, size: 8.5, font, color: INK })); y -= ls.length * 11 + 3;
+  }
+  if (sheet.length > 12) { page.drawText(`... and ${sheet.length - 12} more on the Comment Sheet`, { x: 52, y, size: 8.5, font, color: GREY }); y -= 14; }
+  y -= 14;
+  section(page, W, y, 'PART D - ACTION'); y -= 32;
+  const DEC = ['Approved', 'Approved as noted', 'Revise / Resubmit', 'Rejected', 'Approved as noted / Resubmit', 'No action required / for information only'];
+  DEC.forEach((d, i) => { const x = 46 + (i % 2) * 260, yy = y - Math.floor(i / 2) * 18; box(page, x, yy, d === decision); page.drawText(d, { x: x + 16, y: yy, size: 9.5, font: d === decision ? bold : font, color: d === decision ? RED : INK }); });
+  y -= 70;
+  if (!isFinal) { page.drawText('SUGGESTED BY THE ASSISTANT - NOT YET APPROVED BY THE ENGINEER', { x: 46, y, size: 8, font: bold, color: AMBER }); y -= 18; }
+  field(page, 46, y, 'ENGINEER', ov?.engineer || '____________________'); field(page, 250, y, 'SIGNATURE', '____________________'); field(page, 430, y, 'DATE', isFinal ? today : '__________', 100);
+  footer(page, W);
+}
+
 // Comment sheet (A4 landscape), may span pages
 {
   const W = 842, H = 595, M = 40;
   let page, y;
   const newPage = () => {
     page = out.addPage([W, H]); y = H - M;
+    if (!issued.some(x => x.key === 'sheet')) mark('sheet', 'Comment sheet');
     page.drawText('COMMENT SHEET (SUBMITTAL)', { x: M, y: y - 4, size: 16, font: bold, color: INK });
     page.drawText((isFinal ? 'REVIEWED BY ENGINEER' : 'AUTO-GENERATED DRAFT - FOR ENGINEER REVIEW'), { x: W - M - bold.widthOfTextAtSize((isFinal ? 'REVIEWED BY ENGINEER' : 'AUTO-GENERATED DRAFT - FOR ENGINEER REVIEW'), 9), y: y, size: 9, font: bold, color: RED });
     y -= 26;
@@ -197,9 +276,33 @@ function wrap(text, f, size, width) {
   if (y < 80) newPage();
   page.drawText(isFinal ? 'ACTION:' : 'SUGGESTED ACTION:', { x: M, y, size: 10, font: bold, color: INK });
   page.drawText(decision.toUpperCase(), { x: M + 110, y, size: 10, font: bold, color: RED });
-  page.drawText(ov?.engineer ? `Name: ${ascii(ov.engineer)}     Signature: ____________________     Date: ${new Date().toISOString().slice(0, 10)}` : 'Name: ____________________     Signature: ____________________     Date: ____________', { x: M, y: y - 30, size: 9, font, color: INK });
+  page.drawText(ov?.engineer ? `Name: ${T(ov.engineer)}     Signature: ____________________     Date: ${new Date().toISOString().slice(0, 10)}` : 'Name: ____________________     Signature: ____________________     Date: ____________', { x: M, y: y - 30, size: 9, font, color: INK });
   page.drawText('Draft generated automatically from the submittal and PART F. The engineer reviews, edits and signs; nothing is issued without human approval.', { x: M, y: 30, size: 7.5, font, color: GREY });
+  if (hide) page.drawText(withheld, { x: W - M - bold.widthOfTextAtSize(withheld, 7.5), y: 30, size: 7.5, font: bold, color: GREY });
 }
+
+// Client's technical control comments on linked submittals (the register entry; the client's own
+// document is attached here in the full system).
+for (const l of cfg.linkedSubmittals) {
+  const W = 842, H = 595;
+  const page = out.addPage([W, H]); mark('client', 'Client technical control comments');
+  page.drawText('TECHNICAL CONTROL COMMENTS (CLIENT)', { x: 40, y: H - 52, size: 16, font: bold, color: INK });
+  page.drawText('Linked submittal - carried into this review', { x: 40, y: H - 68, size: 9, font, color: GREY });
+  let y = H - 100;
+  field(page, 46, y, 'TRANSMITTAL REF.', l.ref, 220); field(page, 300, y, 'SUBJECT', l.subject, 220); field(page, 560, y, 'STATUS', l.status, 200); y -= 44;
+  field(page, 46, y, 'REVIEWED BY', [l.reviewedBy, l.reviewer].filter(Boolean).join(' - '), 220); field(page, 300, y, 'DATE', l.reviewedAt); field(page, 560, y, 'OPEN COMMENTS', `${l.openComments} - contractor ${l.contractorResponded ? 'responded' : 'has NOT responded'}`, 220); y -= 50;
+  section(page, W, y, "NO.   CLIENT'S COMMENT                                                                                                                         CONTRACTOR'S RESPONSE"); y -= 16;
+  const rows = l.comments?.length ? l.comments : Array.from({ length: l.openComments }, (_, i) => `Client comment ${i + 1} - see attached client document`);
+  for (const [i, c] of rows.slice(0, 18).entries()) {
+    page.drawRectangle({ x: 40, y: y - 20, width: W - 80, height: 20, borderColor: GREY, borderWidth: 0.5 });
+    page.drawText(String(i + 1), { x: 48, y: y - 14, size: 9, font: bold, color: INK });
+    page.drawText(T(c).slice(0, 95), { x: 76, y: y - 14, size: 9, font, color: INK });
+    page.drawText(l.contractorResponded ? 'Responded' : 'NOT REPLIED', { x: 600, y: y - 14, size: 9, font: bold, color: l.contractorResponded ? GREY : RED });
+    y -= 20;
+  }
+  footer(page, W);
+}
+
 
 // Submittal pages, stamped + marked
 const marks = {}; // page -> [{bbox,label,color}]
@@ -213,9 +316,12 @@ for (const r of results.filter(x => x.status !== 'pass' && x.evidence?.page)) {
 }
 
 const copied = await out.copyPages(src, src.getPageIndices());
+const redacted = { text: 0, images: 0 };
 copied.forEach((pg, i) => {
   out.addPage(pg);
   const { width, height } = pg.getSize();
+  // remove the hidden text/logos from the file itself, then black out the area
+  if (hide) { try { const r = redactPage(out, pg, ex.pages[i]?.redact); redacted.text += r.text; redacted.images += r.images; } catch (e) { console.error('redact page', i + 1, e.message); } }
   if (hide) for (const [x0, y0, x1, y1] of ex.pages[i]?.redact || []) {
     pg.drawRectangle({ x: x0, y: y0, width: x1 - x0, height: y1 - y0, color: rgb(0.13, 0.14, 0.16) });
   }
@@ -246,6 +352,7 @@ copied.forEach((pg, i) => {
 });
 const pdfName = `${ascii(mask(cfg.project.submittalNo))}-Rev${cfg.project.revision}-${isFinal ? 'REVIEWED' : 'REVIEWED-DRAFT'}.pdf`;
 const sheetPages = out.getPageCount() - src.getPageCount();
+if (hide) scrubInfo(out); else out.setTitle(ascii(`${P.submittalNo} Rev ${P.revision} - reviewed`));
 fs.writeFileSync('out/' + pdfName, await out.save());
 // keep only the current output (an unredacted copy must not linger when details are hidden)
 for (const f of fs.readdirSync('out')) if (f.endsWith('.pdf') && f !== pdfName) fs.rmSync('out/' + f);
@@ -254,13 +361,13 @@ fs.writeFileSync('out/review.json', JSON.stringify({
   project: cfg.project, rules: cfg.rules, hidden: hide, aliases: cfg.disclosure?.aliases || [], suggested, decision, final: isFinal, engineerName: ov?.engineer || '',
   draftComments: comments, comments: sheet, results, engineer,
   panels: panels.map(p => ({ name: p.name, kind: p.kind, first: p.pages[0].page, last: p.pages[p.pages.length - 1].page, pages: p.pages })),
-  anomalies: ex.anomalies, pageCount: ex.pageCount, pdfName, sheetPages,
+  anomalies: ex.anomalies, pageCount: ex.pageCount, pdfName, sheetPages, issued, redacted,
   marks: Object.fromEntries(Object.entries(marks).map(([k, v]) => [k, v.map(m => ({ label: m.label, rule: m.rule, fail: m.color === RED }))])),
   stats: { panels: panels.length, checks: results.length, fail: results.filter(r => r.status === 'fail').length, unclear: results.filter(r => r.status === 'unclear').length, markedPages },
 }, null, 1));
 
 // ---------- HTML report ----------
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = s => mask(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const cols = ['R1|R2', 'R3|R4', 'R5', 'R6', 'R7', 'R8'];
 const colNames = ['IP rating', 'Form / Type', 'Aux. wiring', 'Heater + thermostat', 'Consistency', 'Drawing set'];
 const cell = (panel, ids) => {
@@ -348,5 +455,5 @@ ${cfg.rules.map(r => `<tr><td><b>${r.id}</b></td><td>${r.appliesTo.join(', ').re
 </div></body></html>`;
 fs.writeFileSync('out/report.html', html);
 
-console.log({ decision, comments: comments.length, fail: counts('fail'), unclear: counts('unclear'), markedPages, pdf: pdfName, pdfSeconds: (Date.now() - t0) / 1000 });
+console.log({ decision, comments: comments.length, fail: counts('fail'), unclear: counts('unclear'), markedPages, pdf: pdfName, redacted, pdfSeconds: (Date.now() - t0) / 1000 });
 comments.forEach(c => console.log(c.no, c.status, '|', c.text));

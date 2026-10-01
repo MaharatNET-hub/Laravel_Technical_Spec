@@ -44,6 +44,19 @@ function disclosureSwitch() {
     <span><b>Client disclosure</b><small>${S.hide ? 'Details hidden' : 'Details visible'}</small></span></label>`;
 }
 
+function disclosureCard() {
+  const d = S.data.disclosure || {}, red = S.data.review?.redacted;
+  return `<div class="card pad disc-card ${S.hide ? 'on' : ''}">
+    <div class="label">Client disclosure</div>
+    <div class="disc-state"><span class="chip ${S.hide ? 'ok' : 'warn'}"><span class="dot"></span>${S.hide ? 'Client details hidden' : 'Client details visible'}</span></div>
+    <div class="mute" style="font-size:12.5px;margin:6px 0">${S.hide
+      ? 'Names are replaced with neutral labels on screen and in every generated page. On the drawings the text and logos are removed from the PDF itself, not just covered.'
+      : 'Real names are shown. Turn on before showing the demo or sharing the PDF with anyone outside the project.'}</div>
+    <ul class="disc-list">${(d.categories || []).map(c => `<li>${esc(c)}</li>`).join('')}</ul>
+    <div class="mute" style="font-size:12px">${d.aliases} names mapped to labels · ${d.patterns} redaction patterns${S.hide && red ? ` · last PDF: ${red.text} text runs and ${red.images} logos removed` : ''}</div>
+  </div>`;
+}
+
 function crumbs() {
   const p = S.data.project;
   const parts = [`<a data-go="home">${esc(mask(p.name).split(' (')[0])}</a>`];
@@ -87,6 +100,7 @@ function homeView() {
       <div class="spec-row"><span class="chip ok"><span class="dot"></span>Indexed</span><span class="mute" style="font-size:12.5px">Div. 26 &amp; 28 · Section 262300 active</span></div>
       <div class="spec-row"><span class="chip accent">${active} rules</span><a class="mute" style="font-size:12.5px;cursor:pointer" data-open-rules>View &amp; edit rules →</a></div>
     </div>
+    ${disclosureCard()}
     <div class="card pad">
       <div class="label">Linked submittals</div>
       ${S.data.linkedSubmittals.map(l => `<div class="spec-row"><div><b style="font-size:13px">${esc(l.ref)}</b><div class="mute" style="font-size:12.5px">${esc(l.subject)} · ${esc(l.status)}</div></div><span class="chip ${l.contractorResponded ? 'ok' : 'fail'}" style="margin-left:auto">${l.openComments} open</span></div>`).join('')}
@@ -276,6 +290,9 @@ function panelDrawer(name) {
   document.body.appendChild(el);
 }
 
+// Generated pages at the front of the issued PDF (transmittal, comment sheet, client comments).
+const issuedPages = () => (S.data.review.issued || [{ key: 'sheet', title: 'Comment sheet', page: 1 }]).map(g => ({ ...g, id: 'g' + g.page }));
+
 function drawingsTab() {
   const r = S.data.review;
   const pageToPanel = {};
@@ -283,7 +300,7 @@ function drawingsTab() {
   const marked = Object.keys(r.marks).map(Number).sort((a, b) => a - b);
   if (S.page == null) S.page = marked[0] ?? 1;
   const list = [`<div class="label grp">Issued pages</div>`,
-    `<button data-page="sheet" class="${S.page === 'sheet' ? 'on' : ''}"><b>Comment sheet</b><small>${S.comments.length} comments · ${esc(S.decision)}</small></button>`,
+    ...issuedPages().map(g => `<button data-page="${g.id}" class="${S.page === g.id ? 'on' : ''}"><b>${esc(g.title)}</b><small>${g.key === 'sheet' ? `${S.comments.length} comments · ${esc(S.decision)}` : g.key === 'transmittal2' ? esc(S.decision) : g.key === 'client' ? 'Linked submittal' : 'Form F12.5A'}</small></button>`),
     `<button data-page="1" class="${S.page === 1 ? 'on' : ''}"><b>Page 1 · Cover</b><small>Review stamp</small></button>`,
     `<div class="label grp">Marked pages · ${marked.length}</div>`,
     ...marked.map(pg => `<button data-page="${pg}" class="${S.page === pg ? 'on' : ''}"><b>Page ${pg}</b> <span class="mute" style="font-size:12px">${esc(pageToPanel[pg] || '')}</span><small>${r.marks[pg].map(m => `<span style="color:${m.fail ? 'var(--fail)' : 'var(--warn)'}">●</span> ${esc(m.rule)}`).join(' · ')}</small></button>`)];
@@ -301,7 +318,7 @@ function drawingsTab() {
 
 async function drawPage() {
   const r = S.data.review;
-  const outPage = S.page === 'sheet' ? 1 : S.page + r.sheetPages;
+  const outPage = typeof S.page === 'string' ? +S.page.slice(1) || 1 : S.page + r.sheetPages;
   const want = S.page;
   const doc = await pdfjs.getDocument({ url: `/api/page?n=${outPage}&t=${S.stamp}` }).promise;
   if (want !== S.page) return; // user moved on while loading
@@ -312,7 +329,7 @@ async function drawPage() {
   await page.render({ canvasContext: cv.getContext('2d'), viewport: vp, intent: 'print' }).promise; // 'print' avoids requestAnimationFrame (stalls in background tabs)
   const box = $('#cbox'); if (!box) return;
   box.innerHTML = ''; box.appendChild(cv);
-  $('#pgtitle').textContent = S.page === 'sheet' ? 'Comment sheet' : `Submittal page ${S.page} of ${r.pageCount}`;
+  $('#pgtitle').textContent = typeof S.page === 'string' ? (issuedPages().find(g => g.id === S.page)?.title || 'Issued page') : `Submittal page ${S.page} of ${r.pageCount}`;
 }
 
 function rulesTab() {
@@ -359,9 +376,9 @@ document.addEventListener('click', async e => {
   else if (d.openRules !== undefined) { if (!S.data.review) return toast('Run a review first to see rules in action'); S.view = 'ws'; S.tab = 'rules'; render(); }
   else if (d.tab) { S.tab = d.tab; render(); }
   else if (d.viewPage) { $('#drawer')?.remove(); S.page = +d.viewPage; S.tab = 'drawings'; render(); }
-  else if (d.page) { S.page = d.page === 'sheet' ? 'sheet' : +d.page; $('#view').innerHTML = wsView(); drawPage(); }
+  else if (d.page) { S.page = d.page.startsWith('g') ? d.page : +d.page; $('#view').innerHTML = wsView(); drawPage(); }
   else if (d.step) {
-    const pages = ['sheet', 1, ...Object.keys(S.data.review.marks).map(Number).sort((a, b) => a - b)];
+    const pages = [...issuedPages().map(g => g.id), 1, ...Object.keys(S.data.review.marks).map(Number).sort((a, b) => a - b)];
     const i = Math.max(0, pages.indexOf(S.page)); S.page = pages[Math.min(pages.length - 1, Math.max(0, i + +d.step))];
     $('#view').innerHTML = wsView(); drawPage();
   }
@@ -408,6 +425,8 @@ document.addEventListener('change', e => {
     fetch('/api/settings', { method: 'POST', body: JSON.stringify({ hide: S.hide }) }).then(async () => {
       await load(); S.stamp = Date.now(); // names come back from the server already masked (or not)
       if (S.view === 'ws') { $('#view').innerHTML = wsView(); if (S.tab === 'drawings') drawPage(); }
+      crumbs();
+      if (S.view === 'home') $('#view').innerHTML = homeView();
       toast(S.hide ? 'Client details hidden — drawings redacted' : 'Client details visible');
     });
   }

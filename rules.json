@@ -7,7 +7,17 @@
     "revision": 0,
     "title": "Technical Submittal for LV Switchgear Panel GA Drawing (EMDB's, SMDB's & DB's)",
     "vendor": "Pioneer Dynamics Switchgear (EATON licensed panel builder)",
-    "specDocument": "Volume 3 – PART F Electrical (IFC Dec 2024)"
+    "specDocument": "Volume 3 – PART F Electrical (IFC Dec 2024)",
+    "discipline": "Electrical",
+    "submittedAt": "30-Oct-2025",
+    "purpose": "Submitted for review and approval",
+    "parties": {
+      "client": "Dubai Holding",
+      "developer": "Meraas",
+      "consultant": "Dewan Architects + Engineers",
+      "mainContractor": "Naresco",
+      "mepContractor": "REMCO"
+    }
   },
   "linkedSubmittals": [
     {
@@ -16,7 +26,9 @@
       "reviewedBy": "Dubai Holding – Technical Control",
       "status": "Approved as Noted",
       "openComments": 10,
-      "contractorResponded": false
+      "contractorResponded": false,
+      "reviewer": "Hamzeh AbuObaid",
+      "reviewedAt": "20-Aug-2025"
     }
   ],
   "rules": [
@@ -215,6 +227,18 @@
         "EN-00"
       ],
       [
+        "Hamzeh AbuObaid",
+        "Client reviewer"
+      ],
+      [
+        "Ibrahim Saidi",
+        "Consultant engineer"
+      ],
+      [
+        "Meraas",
+        "Developer"
+      ],
+      [
         "City Walk",
         "Project A"
       ],
@@ -255,7 +279,19 @@
       "340 *0775",
       "J1 *(Complex|Warehouse)",
       "599-1039",
-      "Jebel *Ali"
+      "Jebel *Ali",
+      "IBRAHIM *SAIDI",
+      "HAMZEH",
+      "ABU *OBAID"
+    ],
+    "categories": [
+      "Project name, plot and location",
+      "Client, developer and their reference numbers",
+      "Consultant, contractors and vendor names",
+      "People (reviewers, engineers)",
+      "Submittal / transmittal numbers",
+      "Logos and title-block text on every drawing",
+      "PDF metadata (title, author)"
     ]
   }
 }

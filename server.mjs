@@ -61,7 +61,7 @@ const rawState = () => {
   const review = readJson('out/review.json');
   const ex = readJson('out/extracted.json');
   const settings = readJson('out/settings.json', {});
-  return { hide: settings.hide ?? cfg.disclosure?.hide ?? false, aliases: cfg.disclosure?.aliases || [], project: cfg.project, rules: cfg.rules, linkedSubmittals: cfg.linkedSubmittals, review, source: ex?.sourceName || null, sample: fs.existsSync(SAMPLE) ? { name: 'CW5.9-DAE-NCC-REM-TS-MEP-002 – Technical Submittal for LV Switchgear Panel GA Drawing.pdf', sizeMb: +(fs.statSync(SAMPLE).size / 1048576).toFixed(1) } : null };
+  return { hide: settings.hide ?? cfg.disclosure?.hide ?? false, aliases: cfg.disclosure?.aliases || [], disclosure: { categories: cfg.disclosure?.categories || [], aliases: cfg.disclosure?.aliases?.length || 0, patterns: cfg.disclosure?.redactPatterns?.length || 0 }, project: cfg.project, rules: cfg.rules, linkedSubmittals: cfg.linkedSubmittals, review, source: ex?.sourceName || null, sample: fs.existsSync(SAMPLE) ? { name: 'CW5.9-DAE-NCC-REM-TS-MEP-002 – Technical Submittal for LV Switchgear Panel GA Drawing.pdf', sizeMb: +(fs.statSync(SAMPLE).size / 1048576).toFixed(1) } : null };
 };
 
 // The client's documents are confidential: when DEMO_PASSWORD is set, every request needs it.
