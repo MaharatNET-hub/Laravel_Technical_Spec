@@ -1,0 +1,10 @@
+.git
+vendor
+release
+docs
+tests
+.env
+storage/app/demo
+storage/logs/*.log
+*.pdf
+bootstrap/cache/*.php

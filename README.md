@@ -6,7 +6,7 @@ transmittal (Form F12.5A, parts A–D), comment sheet, the client's technical-co
 submittal stamped and marked up — for the engineer to edit and approve.
 
 Pure PHP: no Node, no Docker, no database, no external programs. Runs on shared / free hosting.
-Upload guide (Arabic): [`DEPLOY.md`](DEPLOY.md).
+Upload guide (Arabic): [`DEPLOY.md`](DEPLOY.md) — shared/free PHP hosting via `release/*.zip`, or Render via the `Dockerfile` / `render.yaml` (Web Service, runtime Docker).
 
 ## Layout
 | Path | What |

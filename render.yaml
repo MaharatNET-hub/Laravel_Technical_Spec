@@ -1,0 +1,10 @@
+# Render blueprint: New → Blueprint → pick this repo (or create a Web Service with runtime "Docker").
+services:
+  - type: web
+    name: laravel-technical-spec
+    runtime: docker
+    plan: free
+    healthCheckPath: /up
+    envVars:
+      - key: DEMO_LOCK_DISCLOSURE
+        value: "false"
