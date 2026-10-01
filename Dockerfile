@@ -17,5 +17,6 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progre
     && mkdir -p storage/app/demo/sample storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache .env
 
-# Render (and similar) tell the app which port to listen on in $PORT
-CMD ["sh", "-c", "sed -i \"s/^Listen 80$/Listen ${PORT:-80}/\" /etc/apache2/ports.conf && sed -i \"s/<VirtualHost \\*:80>/<VirtualHost *:${PORT:-80}>/\" /etc/apache2/sites-available/000-default.conf && exec apache2-foreground"]
+# Render (and similar) give the port in $PORT. The free plan starts with empty files on every restart,
+# so the seeder restores the demo (rules, settings, sample + finished review) in the background.
+CMD ["sh", "-c", "sed -i \"s/^Listen 80$/Listen ${PORT:-80}/\" /etc/apache2/ports.conf && sed -i \"s/<VirtualHost \\*:80>/<VirtualHost *:${PORT:-80}>/\" /etc/apache2/sites-available/000-default.conf && (su www-data -s /bin/sh -c 'php artisan db:seed --force' &) && exec apache2-foreground"]

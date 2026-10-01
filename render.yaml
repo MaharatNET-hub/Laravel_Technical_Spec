@@ -1,4 +1,4 @@
-# Render blueprint: New → Blueprint → pick this repo (or create a Web Service with runtime "Docker").
+# Render blueprint: New → Blueprint → pick this repo (or New → Web Service, Language "Docker").
 services:
   - type: web
     name: laravel-technical-spec
@@ -8,3 +8,6 @@ services:
     envVars:
       - key: DEMO_LOCK_DISCLOSURE
         value: "false"
+      # private direct-download link to the sample submittal; the seeder fetches it on every start
+      - key: DEMO_SAMPLE_URL
+        sync: false
