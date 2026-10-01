@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Submittal Review Assistant — demo
 
 Reads a contractor's technical submittal (PDF from AutoCAD/Word), extracts each panel's values,
@@ -16,3 +17,6 @@ npm start          # http://localhost:4817
 Put the sample submittal at `submittal.pdf` to enable "Run review" on the home page (not in git — confidential).
 
 Set `DEMO_PASSWORD` (and optionally `DEMO_USER`) to require a login. Deploy: see `DEPLOY.md`.
+=======
+# Laravel_Technical_Spec
+>>>>>>> 76227f9180b40b0bbc1d3c4329131266ccadfca5
